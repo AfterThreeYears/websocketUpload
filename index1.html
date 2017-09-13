@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <input type="file" class="file" multiple />
+    <script>
+        const fileDOM = document.querySelector('.file');
+        const ws = new WebSocket('ws://localhost:10103');
+        const size = 1024 * 5 * 1000;
+        let curSize, total, file, files, fileReader;
+
+        fileDOM.onchange = () => {
+            files = Array.from(fileDOM.files);
+            init();
+        };
+
+        const init = () => {
+            file = files.shift();
+            curSize = 0;
+            total = file.size;
+            ws.send(file.name);
+            fileReader = new FileReader();
+            fileReader.onload = loadAndSend;
+            readFragment();
+        };
+
+        const loadAndSend = () => {
+            if (ws.bufferedAmount > size * 5) {
+                setTimeout(loadAndSend, 5);
+                return;
+            }
+            ws.send(fileReader.result, true);
+            curSize += size;
+            console.log(`${file.name}上传了 ${(curSize / total * 100).toFixed(0)}% \n\n`);
+            if (curSize < total) {
+                readFragment()
+            } else if (files.length) {
+                console.log(file.name, 'end');
+                init();
+            } else {
+                console.log(file.name, 'end');
+                alert('end');
+            }
+
+        };
+
+        const readFragment = () => {
+            const blob = file.slice(curSize, curSize + size);
+            fileReader.readAsArrayBuffer(blob);
+        }
+    </script>
+</body>
+</html>
